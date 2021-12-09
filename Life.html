@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Game of life rebooted</title>
+  </head>
+  <body>
+    <button onclick="start()">Start</button>
+    <span>Masse biologique:<span id="numBioMass"></span></span>
+    <canvas id="world" width="1000" height="600"></canvas>
+  </body>
+</html>
+<script>
+  // Game of life rebooted
+  // The principles of the game of life twisted out of the grid of the original game:
+  // - A bush is a collection of leaves
+  // - Leafs are circles
+  // - At each cycle, we count the number of overlapping leaves for each leaf
+  // - Too many overlaps -> the leaf chokes to death
+  // - Too few overlaps -> the leaf dies of loneliness
+  // - Survivors grow
+  // - A leaf that is too big splits into children
+  //
+  // X. Carrel
+  // December 2021
+  const worldWidth = 1000;
+  const worldHeight = 600;
+  const toomuch = 40; // high and low thresholds = rules of the game
+  const toolittle = 1;
+  const maxLeafSize = 30; // before splitting...
+  const nbChildren = 3; // ...into that many children ...
+  const minChildrenSize = 1; // ... of at least this size
+  const initialBushSize = 50; // number of leaves in the initial bush
+  const spread = 10; // max interval between leaves in initial bush
+  const lifeCycle = 100; // in milliseconds
+
+  // initialize bush
+  var bush = [];
+
+  // draw bush
+  function draw() {
+    let mass = 0; // biomass of the bush
+    if (world.getContext) {
+      var ctx = world.getContext("2d");
+      ctx.clearRect(0, 0, world.width, world.height);
+      for (leaf of bush) {
+        mass += leaf.r;
+        ctx.beginPath();
+        let green = Math.round(255 - 4 * leaf.r).toString(16); // the bigger, the darker
+        ctx.arc(leaf.x, leaf.y, leaf.r, 0, 2 * Math.PI, false);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#00" + green + "00";
+        ctx.stroke();
+        ctx.fillStyle = "#00" + green + "00";
+        ctx.fill();
+      }
+      numBioMass.innerText = Math.round(mass);
+    }
+  }
+
+  function live() {
+    // compute leaf overlaps
+    for (leaf of bush) {
+      leaf.overlaps = 0;
+      for (mate of bush) {
+        if (mate != leaf) {
+          // don't count yourself
+          let a = mate.x - leaf.x;
+          let b = mate.y - leaf.y;
+          if (Math.sqrt(a * a + b * b) < mate.r + leaf.r) leaf.overlaps++;
+        }
+      }
+    }
+
+    // apply rules of life
+    // 1. Death if there are too many or too little overlaps
+    bush = bush.filter(function (leaf) {
+      return leaf.overlaps > toolittle && leaf.overlaps < toomuch;
+    });
+
+    // 2. What survived may grow if it's lucky
+    for (i = 0; i < bush.length; i++) {
+      if (Math.random() < 0.2) {
+        bush[i].r++;
+      }
+    }
+
+    // 3. What is too big splits
+    for (i = bush.length - 1; i >= 0; i--) {
+      leaf = bush[i];
+      if (leaf.r > maxLeafSize) {
+        for (j = 1; j < nbChildren; j++) {
+          bush.push({
+            x: leaf.x + Math.random() * 2 * leaf.r - leaf.r,
+            y: leaf.y + Math.random() * 2 * leaf.r - leaf.r,
+            r: minChildrenSize + Math.random() * (leaf.r / 2 - minChildrenSize),
+          });
+        }
+        bush.splice(i, 1);
+      }
+    }
+  }
+
+  function cycle() {
+    live();
+    if (bush.length > 0) {
+      // life goes on
+      setTimeout(function () {
+        cycle();
+      }, lifeCycle);
+    }
+    draw();
+  }
+
+  function start() {
+    console.log("start");
+    let bx = worldWidth / 2;
+    let by = worldHeight / 2;
+
+    // build bush
+    for (i = 0; i < initialBushSize; i++) {
+      bx += Math.random() * spread - spread / 2;
+      by += Math.random() * spread - spread / 2;
+      bush.push({
+        x: bx,
+        y: by,
+        r: minChildrenSize + Math.random() * 3 * minChildrenSize,
+      });
+    }
+    cycle();
+  }
+</script>
