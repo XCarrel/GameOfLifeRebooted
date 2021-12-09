@@ -32,7 +32,8 @@
   const minChildrenSize = 1; // ... of at least this size
   const initialBushSize = 50; // number of leaves in the initial bush
   const spread = 10; // max interval between leaves in initial bush
-  const lifeCycle = 100; // in milliseconds
+  const lifeCycle = 300; // in milliseconds
+  const TO_RADIANS = Math.PI / 180;
 
   // initialize bush
   var bush = [];
@@ -41,18 +42,17 @@
   function draw() {
     let mass = 0; // biomass of the bush
     if (world.getContext) {
-      var ctx = world.getContext("2d");
+      let imgSprite = new Image();
+      imgSprite.src = "leaf.png";
+      let ctx = world.getContext("2d");
       ctx.clearRect(0, 0, world.width, world.height);
       for (leaf of bush) {
+        ctx.translate(leaf.x + leaf.r, leaf.y + leaf.r);
+        ctx.rotate(leaf.rot * TO_RADIANS);
+        ctx.drawImage(imgSprite, 0, 0, leaf.r * 2, leaf.r * 2);
+        ctx.rotate(-leaf.rot * TO_RADIANS);
+        ctx.translate(-leaf.x - leaf.r, -leaf.y - leaf.r);
         mass += leaf.r;
-        ctx.beginPath();
-        let green = Math.round(255 - 4 * leaf.r).toString(16); // the bigger, the darker
-        ctx.arc(leaf.x, leaf.y, leaf.r, 0, 2 * Math.PI, false);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "#00" + green + "00";
-        ctx.stroke();
-        ctx.fillStyle = "#00" + green + "00";
-        ctx.fill();
       }
       numBioMass.innerText = Math.round(mass);
     }
@@ -94,6 +94,7 @@
             x: leaf.x + Math.random() * 2 * leaf.r - leaf.r,
             y: leaf.y + Math.random() * 2 * leaf.r - leaf.r,
             r: minChildrenSize + Math.random() * (leaf.r / 2 - minChildrenSize),
+            rot: Math.random() * 360,
           });
         }
         bush.splice(i, 1);
@@ -125,6 +126,7 @@
         x: bx,
         y: by,
         r: minChildrenSize + Math.random() * 3 * minChildrenSize,
+        rot: Math.random() * 360,
       });
     }
     cycle();
