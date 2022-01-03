@@ -67,6 +67,14 @@
         <td><input type="checkbox" id="chkFreeze"/></td>
     </tr>
     <tr>
+        <td>Spray:</td>
+        <td>
+            <input name="spray" type="radio" id="rbtWater" checked/> Water<br>
+            <input name="spray" type="radio" id="rbtSeeds"/> Seeds<br>
+            <input name="spray" type="radio" id="rbtRoundUp"/> RoundUp
+        </td>
+    </tr>
+    <tr>
         <td>Initial population:</td>
         <td><input id="numInitialSize" type="number" value="800"/></td>
     </tr>
@@ -93,7 +101,8 @@
     const worldCenterX = worldWidth / 2
     const worldCenterY = worldHeight / 2
     const worldRadius = Math.min(worldWidth, worldHeight) / 2 * 0.9
-    const TO_RADIANS = Math.PI / 180;
+    const sprayRadius = 20
+    const spraySeeds = 15
 
     var cycleCount = 0
 
@@ -148,17 +157,17 @@
         // apply rules of life
         // 1. Death if there are too many or too little overlaps
 
-        n0=bush.length
+        n0 = bush.length
         bush = bush.filter(function (leaf) {
             return leaf.overlaps > loneliness;
         });
-        n1=bush.length
+        n1 = bush.length
         bush = bush.filter(function (leaf) {
             return leaf.overlaps < choking;
         });
-        n2=bush.length
-        if (n1 > n2) console.log("  -"+(n1-n2)+" (choking)")
-        if (n0 > n1) console.log("  -"+(n0-n1)+" (loneliness)")
+        n2 = bush.length
+        // if (n1 > n2) console.log("  -" + (n1 - n2) + " (choking)")
+        // if (n0 > n1) console.log("  -" + (n0 - n1) + " (loneliness)")
 
         // 2. What survived may grow if it's lucky
         for (i = 0; i < bush.length; i++)
@@ -176,7 +185,7 @@
             if (leaf.r > splitSize)
             {
                 let nbChildren = Math.floor(Math.random() * birthPolicy) + 1
-                console.log("  +"+nbChildren)
+                // console.log("  +" + nbChildren)
                 for (j = 0; j < nbChildren; j++)
                 {
                     let spawn = pickASpotNear(leaf)
@@ -184,7 +193,6 @@
                         x: spawn.x,
                         y: spawn.y,
                         r: spawnSize,
-                        rot: Math.random() * 360,
                     });
                 }
                 bush.splice(i, 1);
@@ -195,12 +203,12 @@
     function cycle()
     {
         let thisCycle = ++cycleCount
-        console.log("Start cycle ", thisCycle)
+        // console.log("Start cycle ", thisCycle)
         if (!chkFreeze.checked)
         {
             live();
             draw();
-            console.log("End cycle ", thisCycle)
+            // console.log("End cycle ", thisCycle)
         }
         if (bush.length > 0)
         {
@@ -229,7 +237,7 @@
 
     function start()
     {
-        console.log("Building bush...")
+        // console.log("Building bush...")
         let bx = worldCenterX;
         let by = worldCenterY;
         let next = {
@@ -244,10 +252,9 @@
                 x: next.x,
                 y: next.y,
                 r: spawnSize,
-                rot: Math.random() * 360,
             });
         }
-        console.log("Go!")
+        // console.log("Go!")
         cycle();
     }
 
@@ -265,9 +272,42 @@
         spread = parseInt(numSpread.value)
         lifeCycle = parseFloat(numLifeCycle.value) * 1000
         growthOdds = parseFloat(numGrowthOdds.value)
+        cmdStart.style.display = 'none'
         start()
     })
 
+    // Spray stuff
+    world.addEventListener('click', function (event) {
+        switch (document.querySelector('input[name="spray"]:checked').id)
+        {
+            case 'rbtWater':
+                for (leaf of bush)
+                {
+                    let a = event.clientX - leaf.x;
+                    let b = event.clientY - leaf.y;
+                    if (Math.sqrt(a * a + b * b) < sprayRadius) leaf.r += 2;
+                }
+                break
+            case 'rbtSeeds':
+                for (i = 0; i < spraySeeds; i++)
+                {
+                    spot = pickASpotNear({x: event.clientX, y: event.clientY})
+                    bush.push({
+                        x: spot.x,
+                        y: spot.y,
+                        r: spawnSize,
+                    });
+                }
+                break
+            case 'rbtRoundUp':
+                for (i = bush.length-1; i >= 0; i--) // going backwards because of shift on delete
+                {
+                    let a = event.clientX - bush[i].x;
+                    let b = event.clientY - bush[i].y;
+                    if (Math.sqrt(a * a + b * b) < sprayRadius) bush.splice(i, 1);
+                }
+        }
+    })
     // Changes in values
     numChoking.addEventListener('change', function () {
         choking = parseInt(numChoking.value)
